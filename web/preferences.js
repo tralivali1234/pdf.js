@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+import { cloneObj } from './ui_utils';
+
 var defaultPreferences = null;
 function getDefaultPreferences() {
   if (!defaultPreferences) {
@@ -38,16 +40,6 @@ function getDefaultPreferences() {
   return defaultPreferences;
 }
 
-function cloneObj(obj) {
-  var result = {};
-  for (var i in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, i)) {
-      result[i] = obj[i];
-    }
-  }
-  return result;
-}
-
 /**
  * BasePreferences - Abstract base class for storing persistent settings.
  *   Used for settings that should be applied to all opened documents,
@@ -65,7 +57,7 @@ class BasePreferences {
         value: Object.freeze(defaults),
         writable: false,
         enumerable: true,
-        configurable: false
+        configurable: false,
       });
 
       this.prefs = cloneObj(defaults);
@@ -149,7 +141,7 @@ class BasePreferences {
                           `expected a ${defaultType}.`);
         }
       } else {
-        if (valueType === 'number' && (value | 0) !== value) {
+        if (valueType === 'number' && !Number.isInteger(value)) {
           throw new Error(`Set preference: "${value}" must be an integer.`);
         }
       }

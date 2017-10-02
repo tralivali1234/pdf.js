@@ -12,64 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
 
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs-test/unit/annotation_spec', ['exports',
-      'pdfjs/core/primitives', 'pdfjs/core/annotation', 'pdfjs/core/stream',
-      'pdfjs/core/parser', 'pdfjs/shared/util'], factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports, require('../../src/core/primitives.js'),
-      require('../../src/core/annotation.js'),
-      require('../../src/core/stream.js'), require('../../src/core/parser.js'),
-      require('../../src/shared/util.js'));
-  } else {
-    factory((root.pdfjsTestUnitAnnotationSpec = {}),
-      root.pdfjsCorePrimitives, root.pdfjsCoreAnnotation, root.pdfjsCoreStream,
-      root.pdfjsCoreParser, root.pdfjsSharedUtil);
-  }
-}(this, function (exports, corePrimitives, coreAnnotation, coreStream,
-                  coreParser, sharedUtil) {
-
-var Annotation = coreAnnotation.Annotation;
-var AnnotationBorderStyle = coreAnnotation.AnnotationBorderStyle;
-var AnnotationFactory = coreAnnotation.AnnotationFactory;
-var Lexer = coreParser.Lexer;
-var Parser = coreParser.Parser;
-var isRef = corePrimitives.isRef;
-var Dict = corePrimitives.Dict;
-var Name = corePrimitives.Name;
-var Ref = corePrimitives.Ref;
-var StringStream = coreStream.StringStream;
-var AnnotationType = sharedUtil.AnnotationType;
-var AnnotationFlag = sharedUtil.AnnotationFlag;
-var AnnotationBorderStyleType = sharedUtil.AnnotationBorderStyleType;
-var AnnotationFieldFlag = sharedUtil.AnnotationFieldFlag;
-var stringToBytes = sharedUtil.stringToBytes;
-var stringToUTF8String = sharedUtil.stringToUTF8String;
+import {
+  Annotation, AnnotationBorderStyle, AnnotationFactory
+} from '../../src/core/annotation';
+import {
+  AnnotationBorderStyleType, AnnotationFieldFlag, AnnotationFlag,
+  AnnotationType, stringToBytes, stringToUTF8String
+} from '../../src/shared/util';
+import { Dict, Name, Ref } from '../../src/core/primitives';
+import { Lexer, Parser } from '../../src/core/parser';
+import { StringStream } from '../../src/core/stream';
+import { XRefMock } from './test_utils';
 
 describe('annotation', function() {
-  function XRefMock(array) {
-    this.map = Object.create(null);
-    for (var elem in array) {
-      var obj = array[elem];
-      var ref = obj.ref, data = obj.data;
-      this.map[ref.toString()] = data;
-    }
-  }
-  XRefMock.prototype = {
-    fetch: function (ref) {
-      return this.map[ref.toString()];
-    },
-    fetchIfRef: function (obj) {
-      if (!isRef(obj)) {
-        return obj;
-      }
-      return this.fetch(obj);
-    },
-  };
-
   function PDFManagerMock(params) {
     this.docBaseUrl = params.docBaseUrl || null;
   }
@@ -81,17 +37,16 @@ describe('annotation', function() {
       obj: params.startObjId || 0,
     };
     return {
-      createObjId: function () {
+      createObjId() {
         return uniquePrefix + (++idCounters.obj);
       },
     };
   }
   IdFactoryMock.prototype = {};
 
-  var annotationFactory, pdfManagerMock, idFactoryMock;
+  var pdfManagerMock, idFactoryMock;
 
   beforeAll(function (done) {
-    annotationFactory = new AnnotationFactory();
     pdfManagerMock = new PDFManagerMock({
       docBaseUrl: null,
     });
@@ -100,7 +55,6 @@ describe('annotation', function() {
   });
 
   afterAll(function () {
-    annotationFactory = null;
     pdfManagerMock = null;
     idFactoryMock = null;
   });
@@ -116,7 +70,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -136,9 +90,9 @@ describe('annotation', function() {
         startObjId: 0,
       });
 
-      var annotation1 = annotationFactory.create(xref, annotationDict,
+      var annotation1 = AnnotationFactory.create(xref, annotationDict,
                                                  pdfManagerMock, idFactory);
-      var annotation2 = annotationFactory.create(xref, annotationDict,
+      var annotation2 = AnnotationFactory.create(xref, annotationDict,
                                                  pdfManagerMock, idFactory);
       var data1 = annotation1.data, data2 = annotation2.data;
       expect(data1.annotationType).toEqual(AnnotationType.LINK);
@@ -157,7 +111,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toBeUndefined();
@@ -178,7 +132,7 @@ describe('annotation', function() {
     });
 
     it('should set and get flags', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setFlags(13);
 
       expect(annotation.hasFlag(AnnotationFlag.INVISIBLE)).toEqual(true);
@@ -188,63 +142,63 @@ describe('annotation', function() {
     });
 
     it('should be viewable and not printable by default', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
 
       expect(annotation.viewable).toEqual(true);
       expect(annotation.printable).toEqual(false);
     });
 
     it('should set and get a valid rectangle', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setRectangle([117, 694, 164.298, 720]);
 
       expect(annotation.rectangle).toEqual([117, 694, 164.298, 720]);
     });
 
     it('should not set and get an invalid rectangle', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setRectangle([117, 694, 164.298]);
 
       expect(annotation.rectangle).toEqual([0, 0, 0, 0]);
     });
 
     it('should reject a color if it is not an array', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor('red');
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 0]));
     });
 
     it('should set and get a transparent color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([]);
 
       expect(annotation.color).toEqual(null);
     });
 
     it('should set and get a grayscale color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.4]);
 
       expect(annotation.color).toEqual(new Uint8Array([102, 102, 102]));
     });
 
     it('should set and get an RGB color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0, 0, 1]);
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 255]));
     });
 
     it('should set and get a CMYK color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.1, 0.92, 0.84, 0.02]);
 
       expect(annotation.color).toEqual(new Uint8Array([233, 59, 47]));
     });
 
     it('should not set and get an invalid color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.4, 0.6]);
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 0]));
@@ -342,7 +296,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -370,7 +324,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -403,7 +357,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -433,7 +387,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -462,7 +416,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -494,7 +448,7 @@ describe('annotation', function() {
         docBaseUrl: 'http://www.example.com/test/pdfs/qwerty.pdf',
       });
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManager, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -523,14 +477,13 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
 
-      expect(data.url).toEqual('http://www.example.com/test.pdf#nameddest=15');
-      expect(data.unsafeUrl).toEqual(
-        'http://www.example.com/test.pdf#nameddest=15');
+      expect(data.url).toEqual('http://www.example.com/test.pdf#15');
+      expect(data.unsafeUrl).toEqual('http://www.example.com/test.pdf#15');
       expect(data.dest).toBeUndefined();
       expect(data.newWindow).toBeFalsy();
     });
@@ -553,7 +506,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -593,7 +546,7 @@ describe('annotation', function() {
         docBaseUrl: 'http://www.example.com/test/pdfs/qwerty.pdf',
       });
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManager, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -628,7 +581,7 @@ describe('annotation', function() {
           { ref: annotationRef, data: annotationDict, }
         ]);
 
-        var annotation = annotationFactory.create(xref, annotationRef,
+        var annotation = AnnotationFactory.create(xref, annotationRef,
                                                   pdfManagerMock,
                                                   idFactoryMock);
         var data = annotation.data;
@@ -680,7 +633,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -701,7 +654,7 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
@@ -724,16 +677,46 @@ describe('annotation', function() {
         { ref: annotationRef, data: annotationDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, annotationRef,
+      var annotation = AnnotationFactory.create(xref, annotationRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
 
       expect(data.url).toBeUndefined();
       expect(data.unsafeUrl).toBeUndefined();
-      expect(data.dest).toEqual([{ num: 17, gen: 0, }, { name: 'XYZ' },
+      expect(data.dest).toEqual([{ num: 17, gen: 0, }, { name: 'XYZ', },
                                  0, 841.89, null]);
     });
+
+    it('should correctly parse a Dest, which violates the specification ' +
+       'by containing a dictionary', function() {
+      let destDict = new Dict();
+      destDict.set('Type', Name.get('Action'));
+      destDict.set('S', Name.get('GoTo'));
+      destDict.set('D', 'page.157');
+
+      let annotationDict = new Dict();
+      annotationDict.set('Type', Name.get('Annot'));
+      annotationDict.set('Subtype', Name.get('Link'));
+      // The /Dest must be a Name or an Array, refer to ISO 32000-1:2008
+      // section 12.3.3, but there are PDF files where it's a dictionary.
+      annotationDict.set('Dest', destDict);
+
+      let annotationRef = new Ref(798, 0);
+      let xref = new XRefMock([
+        { ref: annotationRef, data: annotationDict, }
+      ]);
+
+      let annotation = AnnotationFactory.create(xref, annotationRef,
+                                                pdfManagerMock, idFactoryMock);
+      let data = annotation.data;
+      expect(data.annotationType).toEqual(AnnotationType.LINK);
+
+      expect(data.url).toBeUndefined();
+      expect(data.unsafeUrl).toBeUndefined();
+      expect(data.dest).toEqual('page.157');
+    });
+
   });
 
   describe('WidgetAnnotation', function() {
@@ -757,7 +740,7 @@ describe('annotation', function() {
         { ref: widgetRef, data: widgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, widgetRef,
+      var annotation = AnnotationFactory.create(xref, widgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -774,7 +757,7 @@ describe('annotation', function() {
         { ref: widgetRef, data: widgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, widgetRef,
+      var annotation = AnnotationFactory.create(xref, widgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -798,7 +781,7 @@ describe('annotation', function() {
         { ref: widgetRef, data: widgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, widgetRef,
+      var annotation = AnnotationFactory.create(xref, widgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -820,7 +803,7 @@ describe('annotation', function() {
         { ref: widgetRef, data: widgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, widgetRef,
+      var annotation = AnnotationFactory.create(xref, widgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -852,7 +835,7 @@ describe('annotation', function() {
         { ref: textWidgetRef, data: textWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, textWidgetRef,
+      var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -875,7 +858,7 @@ describe('annotation', function() {
         { ref: textWidgetRef, data: textWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, textWidgetRef,
+      var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -899,7 +882,7 @@ describe('annotation', function() {
         { ref: textWidgetRef, data: textWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, textWidgetRef,
+      var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -918,7 +901,7 @@ describe('annotation', function() {
         { ref: textWidgetRef, data: textWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, textWidgetRef,
+      var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -935,7 +918,7 @@ describe('annotation', function() {
         { ref: textWidgetRef, data: textWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, textWidgetRef,
+      var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -963,7 +946,7 @@ describe('annotation', function() {
           { ref: textWidgetRef, data: textWidgetDict, }
         ]);
 
-        var annotation = annotationFactory.create(xref, textWidgetRef,
+        var annotation = AnnotationFactory.create(xref, textWidgetRef,
                                                   pdfManagerMock,
                                                   idFactoryMock);
         var data = annotation.data;
@@ -1004,7 +987,7 @@ describe('annotation', function() {
         { ref: buttonWidgetRef, data: buttonWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, buttonWidgetRef,
+      var annotation = AnnotationFactory.create(xref, buttonWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1033,7 +1016,7 @@ describe('annotation', function() {
         { ref: buttonWidgetRef, data: buttonWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, buttonWidgetRef,
+      var annotation = AnnotationFactory.create(xref, buttonWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1059,7 +1042,7 @@ describe('annotation', function() {
         { ref: buttonWidgetRef, data: buttonWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, buttonWidgetRef,
+      var annotation = AnnotationFactory.create(xref, buttonWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1093,7 +1076,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1111,11 +1094,11 @@ describe('annotation', function() {
       var expected = [
         {
           exportValue: 'foo_export',
-          displayValue: 'Foo'
+          displayValue: 'Foo',
         },
         {
           exportValue: 'bar_export',
-          displayValue: 'Bar'
+          displayValue: 'Bar',
         }
       ];
 
@@ -1128,7 +1111,7 @@ describe('annotation', function() {
         { ref: optionOneRef, data: optionOneArr, },
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1144,11 +1127,11 @@ describe('annotation', function() {
       var expected = [
         {
           exportValue: 'Foo',
-          displayValue: 'Foo'
+          displayValue: 'Foo',
         },
         {
           exportValue: 'Bar',
-          displayValue: 'Bar'
+          displayValue: 'Bar',
         }
       ];
 
@@ -1160,7 +1143,7 @@ describe('annotation', function() {
         { ref: optionBarRef, data: optionBarStr, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1174,8 +1157,8 @@ describe('annotation', function() {
         ['Value2', 'Description2'],
       ];
       var expected = [
-        { exportValue: 'Value1', displayValue: 'Description1' },
-        { exportValue: 'Value2', displayValue: 'Description2' },
+        { exportValue: 'Value1', displayValue: 'Description1', },
+        { exportValue: 'Value2', displayValue: 'Description2', },
       ];
 
       var parentDict = new Dict();
@@ -1188,7 +1171,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, },
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1206,7 +1189,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1224,7 +1207,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1238,7 +1221,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1256,7 +1239,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1276,7 +1259,7 @@ describe('annotation', function() {
         { ref: choiceWidgetRef, data: choiceWidgetDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, choiceWidgetRef,
+      var annotation = AnnotationFactory.create(xref, choiceWidgetRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.WIDGET);
@@ -1299,7 +1282,7 @@ describe('annotation', function() {
         { ref: lineRef, data: lineDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, lineRef, pdfManagerMock,
+      var annotation = AnnotationFactory.create(xref, lineRef, pdfManagerMock,
                                                 idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINE);
@@ -1352,7 +1335,7 @@ describe('annotation', function() {
       fileSpecDict.assignXref(xref);
       fileAttachmentDict.assignXref(xref);
 
-      var annotation = annotationFactory.create(xref, fileAttachmentRef,
+      var annotation = AnnotationFactory.create(xref, fileAttachmentRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.FILEATTACHMENT);
@@ -1381,7 +1364,7 @@ describe('annotation', function() {
         { ref: popupRef, data: popupDict, }
       ]);
 
-      var annotation = annotationFactory.create(xref, popupRef,
+      var annotation = AnnotationFactory.create(xref, popupRef,
                                                 pdfManagerMock, idFactoryMock);
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.POPUP);
@@ -1393,4 +1376,3 @@ describe('annotation', function() {
     });
   });
 });
-}));

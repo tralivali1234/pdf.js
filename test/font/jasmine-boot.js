@@ -71,9 +71,9 @@ function initializePDFJS(callback) {
 
   // Runner Parameters
   var queryString = new jasmine.QueryString({
-    getWindowLocation: function() {
+    getWindowLocation() {
       return window.location;
-    }
+    },
   });
 
   var catchingExceptions = queryString.getParam('catch');
@@ -93,30 +93,30 @@ function initializePDFJS(callback) {
 
   // Reporters
   var htmlReporter = new jasmine.HtmlReporter({
-    env: env,
-    onRaiseExceptionsClick: function() {
+    env,
+    onRaiseExceptionsClick() {
       queryString.navigateWithNewParam('catch', !env.catchingExceptions());
     },
-    onThrowExpectationsClick: function() {
+    onThrowExpectationsClick() {
       queryString.navigateWithNewParam('throwFailures',
                                        !env.throwingExpectationFailures());
     },
-    onRandomClick: function() {
+    onRandomClick() {
       queryString.navigateWithNewParam('random', !env.randomTests());
     },
-    addToExistingQueryString: function(key, value) {
+    addToExistingQueryString(key, value) {
       return queryString.fullStringWithNewParam(key, value);
     },
-    getContainer: function() {
+    getContainer() {
       return document.body;
     },
-    createElement: function() {
+    createElement() {
       return document.createElement.apply(document, arguments);
     },
-    createTextNode: function() {
+    createTextNode() {
       return document.createTextNode.apply(document, arguments);
     },
-    timer: new jasmine.Timer()
+    timer: new jasmine.Timer(),
   });
 
   env.addReporter(htmlReporter);
@@ -130,9 +130,9 @@ function initializePDFJS(callback) {
   // Filter which specs will be run by matching the start of the full name
   // against the `spec` query param.
   var specFilter = new jasmine.HtmlSpecFilter({
-    filterString: function() {
+    filterString() {
       return queryString.getParam('spec');
-    }
+    },
   });
 
   env.specFilter = function(spec) {
